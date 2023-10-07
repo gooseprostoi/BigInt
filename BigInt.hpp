@@ -30,10 +30,10 @@ const u64 U32MAX = static_cast<u64>(static_cast<u32>(-1)) + 1;
 
 class BigUInt {
 protected:
-    std::vector<u64> digits; // digits[0] - 2^(0), digits[1] - 2^(32), digits[2] - 2^(64)
+    std::vector<u64> digits = std::vector<u64>(1, 0); // digits[0] - 2^(0), digits[1] - 2^(32), digits[2] - 2^(64)
 
 public:
-    BigUInt() : digits(std::vector<u64>(0)) {}
+    BigUInt() {}
     BigUInt(const std::vector<u64>& v) : digits(v) {}
 
     virtual std::string PrintPow() const { // print at x_0 + x_1 * 2^(32) + ... way
@@ -52,6 +52,8 @@ public:
         }
         return result;
     }
+
+    bool is_null() const {return (digits[0] == 0 && digits.size() == 1);}
 
 protected:
 // comparison operations ///////////////////////////////////////////////////////
@@ -119,7 +121,7 @@ protected:
         for (u64 i = 0; i < rhs.digits.size(); ++i) {
             SimpleUSubtract(i, rhs.digits[i]);
         }
-        while (digits[digits.size() - 1] == 0) {digits.pop_back();}
+        while (digits[digits.size() - 1] == 0 && digits.size() != 1) {digits.pop_back();}
         return *this;
     }
 
@@ -152,6 +154,7 @@ protected:
     }
 
     virtual BigUInt& operator*= (const BigUInt& rhs) {
+        if (is_null() || rhs.is_null()) return (*this = BigUInt());
         BigUInt tmp = *this;
         BigUInt result;
         for (u64 i = 0; i < rhs.digits.size(); ++i) {
@@ -170,17 +173,16 @@ class BigInt : protected BigUInt {
 protected:
     bool sign = 0; // 0 - plus, 1 - minus
 
-    void ChangeSign () {sign = !sign;}
-
 public:
     BigInt() : BigUInt() {}
     BigInt(const std::vector<u64>& v) : BigUInt(v) {}
+    BigInt(const std::vector<u64>& v, bool sign) : BigUInt(v), sign(sign) {}
     
     std::string PrintPow() const override { // like PrintPow in BigUInt but with sign
         std::string result;
-        if (sign) result += "-(";
+        if (sign && !BigUInt::is_null()) result += "-(";
         result += BigUInt::PrintPow();
-        if (sign) result += ")";
+        if (sign && !BigUInt::is_null()) result += ")";
         return result;
     }
 
@@ -196,6 +198,7 @@ public:
 
 // comparison operations ///////////////////////////////////////////////////////
     bool operator== (const BigInt& rhs) const {
+        if (BigUInt::is_null() && rhs.BigUInt::is_null()) return true;
         return (digits == rhs.digits) && (sign == rhs.sign);
     }
 
@@ -235,20 +238,18 @@ public:
     }
 
 // *= //////////////////////////////////////////////////////////////////////////////////////////////
-
     BigInt& operator*= (const BigInt& rhs) {
+        if (BigUInt::is_null() || rhs.BigUInt::is_null()) return (*this = BigInt());
         sign = (sign == rhs.sign ? 0 : 1);
         this->BigUInt::operator*=(rhs);
         return *this;
     }
 
 // unary minus ////////////////////////////////////////////////////////////////////////////////////
-
     BigInt& operator- () {
-        ChangeSign();
+        sign = !sign;
         return *this;
     }
-
 
 // friends ///////////////////////////////////////////////////////////////////////////////////////
     friend BigInt operator+ (const BigInt& x, const BigInt& y);
@@ -268,6 +269,12 @@ BigInt operator+ (const BigInt& x, const BigInt& y) {
 
 BigInt operator- (const BigInt& x, const BigInt& y) { // Here easier to copy and use operator+
     BigInt y_copy = y;
-    y_copy.ChangeSign();
+    -y_copy;
     return x + y_copy;
+};
+
+BigInt operator* (const BigInt& x, const BigInt& y) { // Here easier to copy and use operator+
+    BigInt result = x;
+    result *= y;
+    return result;
 };
