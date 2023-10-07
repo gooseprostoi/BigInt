@@ -79,7 +79,7 @@ protected:
 
 
 // += and -= ///////////////////////////////////////////////////////////////////
-    virtual BigUInt& operator+= (const BigUInt& rhs) { // Add BigUInt
+    virtual BigUInt& operator+= (const BigUInt& rhs) {
         const u64 DIGITSIZE = digits.size();
         const u64 RHSSIZE = rhs.digits.size();
         if (DIGITSIZE < RHSSIZE) {
@@ -105,7 +105,7 @@ protected:
         return *this;
     }
 
-    void SimpleUSubtract(u64 index, u64 comp_number) { // rec func used only in USubtract
+    void SimpleUSubtract(u64 index, u64 comp_number) { // rec func used only in operator-=
         if (digits[index] < comp_number) {
             digits[index] += U32MAX - comp_number;
             SimpleUSubtract(index + 1, 1);
