@@ -15,28 +15,35 @@
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 */
 
-
 #include <iostream>
 #include <cstdint>
 #include <vector>
 #include <string>
 #include <bitset>
 
+using u32 = uint32_t;
+using u64 = uint64_t;
 
-using u32 = u_int32_t;
-using u64 = u_int64_t;
+// | Можно было использовать std::numeric_limits
+// || std::numeric_limits можно вызывать только от unsigned long, не от uint64_t. А это разные вещи
 const u64 U32MAX = static_cast<u64>(static_cast<u32>(-1)) + 1;
 
 
 class BigUInt {
 protected:
-    std::vector<u64> digits = std::vector<u64>(1, 0); // digits[0] - 2^(0), digits[1] - 2^(32), digits[2] - 2^(64)
+    std::vector<u64> digits; // digits[0] - 2^(0), digits[1] - 2^(32), digits[2] - 2^(64)
 
 public:
-    BigUInt() {}
+    BigUInt(u32 x = 0) : digits(std::vector<u64>(1, x)) {}
+
+    // | Чаще используют такой вариант:
+    // |    BigUInt(std::vector<u64> v) : digits(std::move(v)) {}
+    // | Но этот тоже хороший.
     BigUInt(const std::vector<u64>& v) : digits(v) {}
 
-    virtual std::string PrintPow() const { // print at x_0 + x_1 * 2^(32) + ... way
+    // | См. также std::stringstream
+    // || Можно так, только не совсем пончтно зачем
+    virtual std::string to_pow() const { // print at x_0 + x_1 * 2^(32) + ... way
         std::string result;
         result += std::to_string(digits[0]);
         for (u64 i = 1; i < digits.size(); ++i) {
@@ -45,7 +52,7 @@ public:
         return result;
     }
 
-    virtual std::string PrintBinary() const { // print BigUInt in binary
+    virtual std::string to_binary() const { // print BigUInt in binary
         std::string result;
         for (u64 i = 0; i < digits.size(); ++i) {
             result = std::bitset<32>(digits[i]).to_string() + result;
@@ -53,15 +60,13 @@ public:
         return result;
     }
 
-    bool is_null() const {return (digits[0] == 0 && digits.size() == 1);}
+    bool is_zero() const {return (digits[0] == 0 && digits.size() == 1);}
 
 protected:
 // comparison operations ///////////////////////////////////////////////////////
-    virtual bool operator== (const BigUInt& rhs) const {
-        return (digits == rhs.digits);
-    }
+    bool operator== (const BigUInt& rhs) const { return (digits == rhs.digits); }
 
-    virtual bool operator> (const BigUInt& rhs) const { // return |*this| > |rhs|
+    bool operator> (const BigUInt& rhs) const { // return |*this| > |rhs|
         bool result;
         const u64 DIGITSIZE = digits.size();
         const u64 RHSSIZE = rhs.digits.size();
@@ -82,12 +87,8 @@ protected:
     virtual BigUInt& operator+= (const BigUInt& rhs) {
         const u64 DIGITSIZE = digits.size();
         const u64 RHSSIZE = rhs.digits.size();
-        if (DIGITSIZE < RHSSIZE) {
-            digits.resize(RHSSIZE + 1);
-        }
-        else {
-            digits.resize(DIGITSIZE + 1);
-        }
+        if (DIGITSIZE < RHSSIZE) digits.resize(RHSSIZE + 1);
+        else digits.resize(DIGITSIZE + 1);
 
         for (u64 i = 0; i < RHSSIZE; ++i) {
             digits[i] += rhs.digits[i];
@@ -99,12 +100,11 @@ protected:
             digits[i] %= U32MAX;
         }
 
-        if (digits[digits.size() - 1] == 0) {
-            digits.pop_back();
-        }
+        if (digits[digits.size() - 1] == 0) digits.pop_back();
         return *this;
     }
 
+    // | С while-ом вместо рекурсии, кажется, было бы проще
     void SimpleUSubtract(u64 index, u64 comp_number) { // rec func used only in operator-=
         if (digits[index] < comp_number) {
             digits[index] += U32MAX - comp_number;
@@ -121,7 +121,7 @@ protected:
         for (u64 i = 0; i < rhs.digits.size(); ++i) {
             SimpleUSubtract(i, rhs.digits[i]);
         }
-        while (digits[digits.size() - 1] == 0 && digits.size() != 1) {digits.pop_back();}
+        while (digits[digits.size() - 1] == 0 && digits.size() != 1) { digits.pop_back(); }
         return *this;
     }
 
@@ -137,9 +137,7 @@ protected:
         digits[i] += rest;
         new_rest += digits[i] / U32MAX;
         digits[i] %= U32MAX;
-        if (i == digits.size() - 1) {
-            return new_rest;
-        }
+        if (i == digits.size() - 1) return new_rest;
         return RecFuncMultiply(mult_number, new_rest, i + 1);
     }
 
@@ -154,100 +152,109 @@ protected:
     }
 
     virtual BigUInt& operator*= (const BigUInt& rhs) {
-        if (is_null() || rhs.is_null()) return (*this = BigUInt());
-        BigUInt tmp = *this;
-        BigUInt result;
+        if (is_zero() || rhs.is_zero()) return (*this = BigUInt());
+        BigUInt tmp = *this, result;
         for (u64 i = 0; i < rhs.digits.size(); ++i) {
             result += tmp.SimpleUMultiply(rhs.digits[i], i);
-            result.PrintPow();
+            result.to_pow();
             tmp = *this;
         }
         *this = result;
         return *this;
     }
-
 };
+
+std::ostream& operator<< (std::ostream& os, const BigUInt& biguint) { return os << biguint.to_pow(); }
 
 
 class BigInt : protected BigUInt {
 protected:
-    bool sign = 0; // 0 - plus, 1 - minus
+    bool sign; // 0 - plus, 1 - minus
 
 public:
-    BigInt() : BigUInt() {}
-    BigInt(const std::vector<u64>& v) : BigUInt(v) {}
-    BigInt(const std::vector<u64>& v, bool sign) : BigUInt(v), sign(sign) {}
+    BigInt(int64_t x = 0) : BigUInt(std::abs(x)), sign(x / std::abs(x)) {}
+    BigInt(const std::vector<u64>& v, bool sign = 0) : BigUInt(v), sign(sign) {}
     
-    std::string PrintPow() const override { // like PrintPow in BigUInt but with sign
+    std::string to_pow() const override { // like to_pow in BigUInt but with sign
         std::string result;
-        if (sign && !BigUInt::is_null()) result += "-(";
-        result += BigUInt::PrintPow();
-        if (sign && !BigUInt::is_null()) result += ")";
+        if (sign && !BigUInt::is_zero()) result += "-(";
+        result += BigUInt::to_pow();
+        if (sign && !BigUInt::is_zero()) result += ")";
         return result;
     }
 
-    std::string PrintBinary() const override { // like PrintBinary in BigUInt but with sign in front, for example 110 = -2
+    std::string to_binary() const override { // like to_binary in BigUInt but with sign in front, for example 110 = -2
         std::string result;
         for (u64 i = 0; i < digits.size(); ++i) {
             result = std::bitset<32>(digits[i]).to_string() + result;
         }
-        if (sign) result = '1' + result;
-        else result = '0' + result;
+        result = (sign ? '1' : '0') + result;
         return result;
     }
 
 // comparison operations ///////////////////////////////////////////////////////
     bool operator== (const BigInt& rhs) const {
-        if (BigUInt::is_null() && rhs.BigUInt::is_null()) return true;
+        if (is_zero() && rhs.is_zero()) return true;
         return (digits == rhs.digits) && (sign == rhs.sign);
     }
 
     bool operator> (const BigInt& rhs) const {
-        // fast cases
-        if (sign == 0 && rhs.sign == 1) return 1;
-        if (sign == 1 && rhs.sign == 0) return 0;
+        // fast case
+        if (sign != rhs.sign) return rhs.sign;
 
         bool result = this->BigUInt::operator>( rhs );
 
         // remember that maybe some is negative
-        if (sign == 1 && rhs.sign == 1) result = !result;
+        if (sign == true && rhs.sign == true) result = !result;
         return result;
     }
 
-    bool operator>= (const BigInt& rhs) const {
-        return (*this > rhs) || (*this == rhs);
-    }
+    bool operator>= (const BigInt& rhs) const { return (*this > rhs) || (*this == rhs); }
 
-    bool operator<= (const BigInt& rhs) const {
-        return !(*this > rhs);
-    }
-
-    bool operator< (const BigInt& rhs) const {
-        return !(*this >= rhs);
-    } 
+    bool operator<= (const BigInt& rhs) const { return !(*this > rhs); }
+    
+    bool operator< (const BigInt& rhs) const { return !(*this >= rhs); } 
 
 // += and -= (defined through operator+ and operator-)////////////////////////////
     BigInt& operator+= (const BigInt& rhs) {
-        *this = *this + rhs;
+        if (sign == rhs.sign) this->BigUInt::operator+=(rhs);
+        else {
+            bool is_larger = this->BigUInt::operator>(rhs);
+            sign = is_larger ? sign : rhs.sign;
+            if (is_larger) this->BigUInt::operator-=(rhs);
+            else { // I don't know how to avoid copying here
+                const BigInt tmp = *this;
+                *this = rhs;
+                this->BigUInt::operator-=(tmp);
+            }
+        }
         return *this;
     }
 
     BigInt& operator-= (const BigInt& rhs) {
-        *this = *this - rhs;
+        change_sign();
+        (*this) += rhs;
+        change_sign();
         return *this;
     }
 
 // *= //////////////////////////////////////////////////////////////////////////////////////////////
     BigInt& operator*= (const BigInt& rhs) {
-        if (BigUInt::is_null() || rhs.BigUInt::is_null()) return (*this = BigInt());
+        if (BigUInt::is_zero() || rhs.BigUInt::is_zero()) return (*this = BigInt());
         sign = (sign == rhs.sign ? 0 : 1);
         this->BigUInt::operator*=(rhs);
         return *this;
     }
 
-// unary minus ////////////////////////////////////////////////////////////////////////////////////
-    BigInt& operator- () {
+// change_sign and unary minus /////////////////////////////////////////////////////////////////////
+    BigInt& change_sign() {
         sign = !sign;
+        return *this;
+    }
+
+    // | Унарный минус должен создавать копию, иначе это очень контринтуитивно
+    BigInt operator- () {
+        this->change_sign();
         return *this;
     }
 
@@ -257,20 +264,15 @@ public:
 };
 
 BigInt operator+ (const BigInt& x, const BigInt& y) {
-    BigInt result = (x.BigUInt::operator>(y) ? x : y);
-    const BigInt& LowerInModulus = (x.BigUInt::operator>(y) ? y : x);
-    if (x.sign == y.sign) {
-        result.BigUInt::operator+=(LowerInModulus);
-        return result;
-    }
-    result.BigUInt::operator-=(LowerInModulus);
+    BigInt result = x; 
+    result += y;
     return result;
 }
 
-BigInt operator- (const BigInt& x, const BigInt& y) { // Here easier to copy and use operator+
-    BigInt y_copy = y;
-    -y_copy;
-    return x + y_copy;
+BigInt operator- (const BigInt& x, const BigInt& y) {
+    BigInt result = x;
+    result -= y;
+    return result;
 };
 
 BigInt operator* (const BigInt& x, const BigInt& y) { // Here easier to copy and use operator+
@@ -278,3 +280,5 @@ BigInt operator* (const BigInt& x, const BigInt& y) { // Here easier to copy and
     result *= y;
     return result;
 };
+
+std::ostream& operator<< (std::ostream& os, const BigInt& biguint) { return os << biguint.to_pow(); }

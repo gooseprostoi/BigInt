@@ -10,21 +10,21 @@ TEST_CASE("TEST 1 (Adding)") {
     BigInt x_1({1});
     BigInt x_2({1});
 
-    REQUIRE((x_1 + x_2).PrintPow() == "2");
+    REQUIRE((x_1 + x_2).to_pow() == "2");
     std::cout << "checkpoint 1:1\n";
 
 //////////////////////////////////////////////////////////////////////////////////////////
     x_1 = BigInt({U32MAX - 1});
     x_2 = BigInt({1});
 
-    REQUIRE((x_1 + x_2).PrintPow() == "0 + 1 * 2^(32)");
+    REQUIRE((x_1 + x_2).to_pow() == "0 + 1 * 2^(32)");
     std::cout << "checkpoint 1:2\n";
 
 //////////////////////////////////////////////////////////////////////////////////////////
     x_1 = BigInt({U32MAX - 1, U32MAX - 1, U32MAX - 1, U32MAX - 1, U32MAX - 1, U32MAX - 1, U32MAX - 1});
     x_2 = BigInt({1});
 
-    REQUIRE((x_1 + x_2).PrintPow() == 
+    REQUIRE((x_1 + x_2).to_pow() == 
     "0 + 0 * 2^(32) + 0 * 2^(64) + 0 * 2^(96) + 0 * 2^(128) + 0 * 2^(160) + 0 * 2^(192) + 1 * 2^(224)");
     std::cout << "checkpoint 1:3\n";
 
@@ -33,7 +33,7 @@ TEST_CASE("TEST 1 (Adding)") {
     x_2 = BigInt({1});
     -x_2;
 
-    REQUIRE((x_1 + x_2).PrintBinary() == 
+    REQUIRE((x_1 + x_2).to_binary() == 
     "01111111111111111111111111111111111111111111111111111111111111111"); // 0 because positive
     std::cout << "checkpoint 1:4\n";
 
@@ -41,7 +41,7 @@ TEST_CASE("TEST 1 (Adding)") {
     x_1 = BigInt({1,2,3,4,5,6,7});
     x_2 = BigInt({7,6,5,4,3,2,1});
 
-    REQUIRE((x_1 + x_2).PrintPow() == 
+    REQUIRE((x_1 + x_2).to_pow() == 
     "8 + 8 * 2^(32) + 8 * 2^(64) + 8 * 2^(96) + 8 * 2^(128) + 8 * 2^(160) + 8 * 2^(192)");
     std::cout << "checkpoint 1:5\n";
 
@@ -139,7 +139,7 @@ TEST_CASE("Test 3 (Multiplication)") {
     x_1 = BigInt(v_1, 1);
     x_2 = BigInt(v_2);
 
-    REQUIRE((x_1 * x_2).PrintPow() == "-(252)");
+    REQUIRE((x_1 * x_2).to_pow() == "-(252)");
     std::cout << "checkpoint 3:2\n";
 //////////////////////////////////////////////////////////////////////////////////////////   
     v_1 = {1};
@@ -147,7 +147,7 @@ TEST_CASE("Test 3 (Multiplication)") {
     x_1 = BigInt(v_1, 1);
     x_2 = BigInt(v_2);
 
-    REQUIRE((x_1 * x_2).PrintPow() == "-(1)");
+    REQUIRE((x_1 * x_2).to_pow() == "-(1)");
     std::cout << "checkpoint 3:3\n";
 //////////////////////////////////////////////////////////////////////////////////////////   
     v_1 = {U32MAX - 1};
@@ -155,7 +155,7 @@ TEST_CASE("Test 3 (Multiplication)") {
     x_1 = BigInt(v_1);
     x_2 = BigInt(v_2);
 
-    REQUIRE((x_1 * x_2).PrintPow() == "1 + 4294967294 * 2^(32)");
+    REQUIRE((x_1 * x_2).to_pow() == "1 + 4294967294 * 2^(32)");
     std::cout << "checkpoint 3:4\n";
 //////////////////////////////////////////////////////////////////////////////////////////   
     v_1 = {0, 1};
@@ -163,7 +163,7 @@ TEST_CASE("Test 3 (Multiplication)") {
     x_1 = BigInt(v_1);
     x_2 = BigInt(v_2);
 
-    REQUIRE((x_1 * x_2).PrintPow() == "0 + 0 * 2^(32) + 0 * 2^(64) + 1 * 2^(96)");
+    REQUIRE((x_1 * x_2).to_pow() == "0 + 0 * 2^(32) + 0 * 2^(64) + 1 * 2^(96)");
     std::cout << "checkpoint 3:5\n";
 //////////////////////////////////////////////////////////////////////////////////////////   
     v_1 = {U32MAX - 1, U32MAX - 1, U32MAX - 1, U32MAX - 1, U32MAX - 1};
@@ -171,7 +171,7 @@ TEST_CASE("Test 3 (Multiplication)") {
     x_1 = BigInt(v_1);
     x_2 = BigInt(v_2);
 
-    REQUIRE((x_1 * x_2).PrintPow() == "0");
+    REQUIRE((x_1 * x_2).to_pow() == "0");
     std::cout << "checkpoint 3:6\n";
 }
 
