@@ -38,7 +38,7 @@ public:
 
     // | Чаще используют такой вариант:
     // |    BigUInt(std::vector<u64> v) : digits(std::move(v)) {}
-    // | Но этот тоже хороший.
+    // | Но этот тоже хороший. См. clang_tidy.
     BigUInt(const std::vector<u64>& v) : digits(v) {}
 
     // | См. также std::stringstream
@@ -172,7 +172,7 @@ protected:
     bool sign; // 0 - plus, 1 - minus
 
 public:
-    BigInt(int64_t x = 0) : BigUInt(std::abs(x)), sign(x / std::abs(x)) {}
+    BigInt(int64_t x = 0) : BigUInt(std::abs(x)), sign(x != 0 ? (x / std::abs(x) + 1 ) / 2 : 0) {}
     BigInt(const std::vector<u64>& v, bool sign = 0) : BigUInt(v), sign(sign) {}
     
     std::string to_pow() const override { // like to_pow in BigUInt but with sign
@@ -193,19 +193,21 @@ public:
     }
 
 // comparison operations ///////////////////////////////////////////////////////
+// ЗДЕСЬ ЕСТЬ ОШИБКА. ЛУЧШЕ ПЕРЕДЕЛАТЬ ЧЕРЕЗ startship <=>.
     bool operator== (const BigInt& rhs) const {
         if (is_zero() && rhs.is_zero()) return true;
         return (digits == rhs.digits) && (sign == rhs.sign);
     }
 
-    bool operator> (const BigInt& rhs) const {
+    bool operator> (const BigInt& rhs) const { // ошибка +0 > -0 - true
         // fast case
+        if (is_zero() && rhs.is_zero()) return false;
         if (sign != rhs.sign) return rhs.sign;
 
         bool result = this->BigUInt::operator>( rhs );
 
         // remember that maybe some is negative
-        if (sign == true && rhs.sign == true) result = !result;
+        if (sign && rhs.sign) result = !result;
         return result;
     }
 
