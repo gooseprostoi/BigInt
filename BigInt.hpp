@@ -257,10 +257,6 @@ public:
         this->change_sign();
         return *this;
     }
-
-// friends ///////////////////////////////////////////////////////////////////////////////////////
-    friend BigInt operator+ (const BigInt& x, const BigInt& y);
-    friend BigInt operator- (const BigInt& x, const BigInt& y);
 };
 
 BigInt operator+ (const BigInt& x, const BigInt& y) {
@@ -281,4 +277,4 @@ BigInt operator* (const BigInt& x, const BigInt& y) { // Here easier to copy and
     return result;
 };
 
-std::ostream& operator<< (std::ostream& os, const BigInt& biguint) { return os << biguint.to_pow(); }
+std::ostream& operator<< (std::ostream& os, const BigInt& bigint) { return os << bigint.to_pow(); }
